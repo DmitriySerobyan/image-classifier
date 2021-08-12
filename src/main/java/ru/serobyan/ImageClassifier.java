@@ -24,8 +24,8 @@ import java.util.*;
 
 public class ImageClassifier {
 
-    private static final int HEIGHT = 28;
-    private static final int WIDTH = 28;
+    private static final int HEIGHT = 64;
+    private static final int WIDTH = 64;
     private static final double PREDICT_THRESHOLD = 0.8;
 
     private final File[] trainingImageFolders;
@@ -145,6 +145,10 @@ public class ImageClassifier {
     }
 
     private Optional<INDArray> imageToINDArray(File image) throws IOException {
+        if (image.getName().endsWith(".gif")) {
+            System.out.println("ACHTUNG!!!");
+            return Optional.empty();
+        }
         var writableImg = nativeImageLoader.asWritable(image);
         writableImg = resizer.transform(writableImg);
         var img = nativeImageLoader.asRowVector(writableImg.getFrame());

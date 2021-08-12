@@ -16,16 +16,14 @@ public class Main {
             var trainingData = classifier.getTrainingDataSetIterator();
             classifier.trainModel(trainingData);
 
-            var testingData = classifier.getTestingDataSetIterator();
-            classifier.evaluatingModel(testingData);
+//            var testingData = classifier.getTestingDataSetIterator();
+//            classifier.evaluatingModel(testingData);
 
             var imageFolder = new File("D:\\PicturesU");
             var imagesForClassification = imageFolder.listFiles();
             for (var image : imagesForClassification) {
                 var labelOpt = classifier.predict(image);
-                labelOpt.ifPresent(label -> {
-                    moveImage(image, label);
-                });
+                labelOpt.ifPresent(label -> moveImage(image, label));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -34,10 +32,11 @@ public class Main {
 
     private static void moveImage(File image, String label) {
         try {
-            Files.copy(
+            Files.move(
                 Paths.get(image.getAbsolutePath()),
                 Paths.get("D:\\classification_test\\" + label + "\\" + image.getName()),
-                StandardCopyOption.REPLACE_EXISTING);
+                StandardCopyOption.REPLACE_EXISTING
+            );
         } catch (IOException e) {
             e.printStackTrace();
         }
