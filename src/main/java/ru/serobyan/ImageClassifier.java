@@ -39,7 +39,13 @@ public class ImageClassifier {
     private final ResizeImageTransform resizer = new ResizeImageTransform(WIDTH, HEIGHT);
     private MultiLayerNetwork model;
 
-    public ImageClassifier(File[] trainingImageFolders, File[] testingImageFolders, int nOutcomes, Map<String, Integer> labelToLabelNumber, Map<Integer, String> labelNumberToLabel) {
+    public ImageClassifier(
+        File[] trainingImageFolders,
+        File[] testingImageFolders,
+        int nOutcomes,
+        Map<String, Integer> labelToLabelNumber,
+        Map<Integer, String> labelNumberToLabel
+    ) {
         this.trainingImageFolders = trainingImageFolders;
         this.testingImageFolders = testingImageFolders;
         this.nOutcomes = nOutcomes;
@@ -62,7 +68,13 @@ public class ImageClassifier {
             labelNumberToLabel.put(labelNumber, label);
             labelNumber++;
         }
-        return new ImageClassifier(trainingImageFolders, testingImageFolders, nOutcomes, labelToLabelNumber, labelNumberToLabel);
+        return new ImageClassifier(
+            trainingImageFolders,
+            testingImageFolders,
+            nOutcomes,
+            labelToLabelNumber,
+            labelNumberToLabel
+        );
     }
 
     public void buildModel() {
@@ -136,7 +148,7 @@ public class ImageClassifier {
         var writableImg = nativeImageLoader.asWritable(image);
         writableImg = resizer.transform(writableImg);
         var img = nativeImageLoader.asRowVector(writableImg.getFrame());
-        if (img.data().length() > nIncomes) {
+        if (img.data().length() != nIncomes) {
             System.out.println("ACHTUNG!!!");
             return Optional.empty();
         }
