@@ -169,9 +169,12 @@ public class ImageClassifier {
 
     public Optional<String> predict(File file) throws IOException {
         System.out.println("Predict image: " + file.getName());
-        var imageINDArray = imageToINDArray(file).get();
+        var imageINDArrayOpt = imageToINDArray(file);
+        if (imageINDArrayOpt.isEmpty()) {
+            return Optional.empty();
+        }
         var input = Nd4j.create(1, nIncomes);
-        input.putRow(0, imageINDArray);
+        input.putRow(0, imageINDArrayOpt.get());
         var results = model.output(input);
         var arrayResults = results.data().asDouble();
         System.out.println("Predict results: " + Arrays.toString(arrayResults));
