@@ -64,7 +64,7 @@ public class ImageClassifier {
             .l2(1e-4).list()
             .layer(
                 new DenseLayer.Builder()
-                    .nIn(HEIGHT * WIDTH)
+                    .nIn(nIncomes)
                     .nOut(1000)
                     .activation(Activation.RELU)
                     .weightInit(WeightInit.XAVIER).build()
