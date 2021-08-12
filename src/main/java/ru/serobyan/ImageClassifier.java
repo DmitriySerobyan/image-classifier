@@ -28,6 +28,7 @@ public class ImageClassifier {
 
     private final File[] trainingImageFolders;
     private final File[] testingImageFolders;
+    private final int nIncomes = HEIGHT * WIDTH * 3;
     private final int nOutcomes;
     private final Map<String, Integer> labelToLabelNumber;
     private MultiLayerNetwork model;
@@ -100,7 +101,7 @@ public class ImageClassifier {
         var scaler = new ImagePreProcessingScaler(0, 1);
         var resizer = new ResizeImageTransform(WIDTH, HEIGHT);
 
-        var input = Nd4j.create(nSamples, HEIGHT * WIDTH);
+        var input = Nd4j.create(nSamples, nIncomes);
         var output = Nd4j.create(nSamples, nOutcomes);
 
         int n = 0;
@@ -108,9 +109,14 @@ public class ImageClassifier {
             var imageFiles = folder.listFiles();
             var label = folder.getName();
             for (var imgFile : imageFiles) {
+                System.out.println(n + ": " + imgFile.getName());
                 var writableImg = nativeImageLoader.asWritable(imgFile);
                 writableImg = resizer.transform(writableImg);
                 var img = nativeImageLoader.asRowVector(writableImg.getFrame());
+                if (img.data().length() != nIncomes) {
+                    n++;
+                    continue;
+                }
                 scaler.transform(img);
                 input.putRow(n, img);
                 var labelNumber = labelToLabelNumber.get(label);
