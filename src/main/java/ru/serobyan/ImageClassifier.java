@@ -10,6 +10,7 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
@@ -25,19 +26,25 @@ public class ImageClassifier {
 
     private static final int HEIGHT = 28;
     private static final int WIDTH = 28;
+    private static final double PREDICT_THRESHOLD = 0.8;
 
     private final File[] trainingImageFolders;
     private final File[] testingImageFolders;
     private final int nIncomes = HEIGHT * WIDTH * 3;
     private final int nOutcomes;
     private final Map<String, Integer> labelToLabelNumber;
+    private final Map<Integer, String> labelNumberToLabel;
+    private final NativeImageLoader nativeImageLoader = new NativeImageLoader();
+    private final ImagePreProcessingScaler scaler = new ImagePreProcessingScaler(0, 1);
+    private final ResizeImageTransform resizer = new ResizeImageTransform(WIDTH, HEIGHT);
     private MultiLayerNetwork model;
 
-    public ImageClassifier(File[] trainingImageFolders, File[] testingImageFolders, int nOutcomes, Map<String, Integer> labelToLabelNumber) {
+    public ImageClassifier(File[] trainingImageFolders, File[] testingImageFolders, int nOutcomes, Map<String, Integer> labelToLabelNumber, Map<Integer, String> labelNumberToLabel) {
         this.trainingImageFolders = trainingImageFolders;
         this.testingImageFolders = testingImageFolders;
         this.nOutcomes = nOutcomes;
         this.labelToLabelNumber = labelToLabelNumber;
+        this.labelNumberToLabel = labelNumberToLabel;
     }
 
     static ImageClassifier of(String trainingImageFoldersPath, String testingImageFoldersPath) {
@@ -47,13 +54,15 @@ public class ImageClassifier {
         var testingImageFolders = testingImageFolder.listFiles();
         var nOutcomes = trainingImageFolders.length;
         var labelToLabelNumber = new HashMap<String, Integer>();
+        var labelNumberToLabel = new HashMap<Integer, String>();
         var labelNumber = 0;
         for (var folder : trainingImageFolders) {
             var label = folder.getName();
             labelToLabelNumber.put(label, labelNumber);
+            labelNumberToLabel.put(labelNumber, label);
             labelNumber++;
         }
-        return new ImageClassifier(trainingImageFolders, testingImageFolders, nOutcomes, labelToLabelNumber);
+        return new ImageClassifier(trainingImageFolders, testingImageFolders, nOutcomes, labelToLabelNumber, labelNumberToLabel);
     }
 
     public void buildModel() {
@@ -97,10 +106,6 @@ public class ImageClassifier {
             .mapToInt(subFolder -> subFolder.listFiles().length)
             .sum();
 
-        var nativeImageLoader = new NativeImageLoader();
-        var scaler = new ImagePreProcessingScaler(0, 1);
-        var resizer = new ResizeImageTransform(WIDTH, HEIGHT);
-
         var input = Nd4j.create(nSamples, nIncomes);
         var output = Nd4j.create(nSamples, nOutcomes);
 
@@ -108,17 +113,14 @@ public class ImageClassifier {
         for (var folder : folders) {
             var imageFiles = folder.listFiles();
             var label = folder.getName();
-            for (var imgFile : imageFiles) {
-                System.out.println(n + ": " + imgFile.getName());
-                var writableImg = nativeImageLoader.asWritable(imgFile);
-                writableImg = resizer.transform(writableImg);
-                var img = nativeImageLoader.asRowVector(writableImg.getFrame());
-                if (img.data().length() != nIncomes) {
+            for (var imageFile : imageFiles) {
+                System.out.println(n + ": " + imageFile.getName());
+                var imageINDArray = imageToINDArray(imageFile);
+                if (imageINDArray.isEmpty()) {
                     n++;
                     continue;
                 }
-                scaler.transform(img);
-                input.putRow(n, img);
+                input.putRow(n, imageINDArray.get());
                 var labelNumber = labelToLabelNumber.get(label);
                 output.put(n, labelNumber, 1.0);
                 n++;
@@ -130,6 +132,18 @@ public class ImageClassifier {
         return new ListDataSetIterator<>(listDataSet, 10);
     }
 
+    private Optional<INDArray> imageToINDArray(File image) throws IOException {
+        var writableImg = nativeImageLoader.asWritable(image);
+        writableImg = resizer.transform(writableImg);
+        var img = nativeImageLoader.asRowVector(writableImg.getFrame());
+        if (img.data().length() > nIncomes) {
+            System.out.println("ACHTUNG!!!");
+            return Optional.empty();
+        }
+        scaler.transform(img);
+        return Optional.of(img);
+    }
+
     public void trainModel(DataSetIterator trainingDataSetIterator) {
         System.out.println("Train Model...");
         model.fit(trainingDataSetIterator);
@@ -139,5 +153,30 @@ public class ImageClassifier {
         System.out.println("Evaluating Model...");
         var eval = model.evaluate(testingDataSetIterator);
         System.out.println(eval.stats());
+    }
+
+    public Optional<String> predict(File file) throws IOException {
+        System.out.println("Predict image: " + file.getName());
+        var imageINDArray = imageToINDArray(file).get();
+        var input = Nd4j.create(1, nIncomes);
+        input.putRow(0, imageINDArray);
+        var results = model.output(input);
+        var arrayResults = results.data().asDouble();
+        System.out.println("Predict results: " + Arrays.toString(arrayResults));
+        var maxResult = 0.0;
+        var maxLabelNumber = -1;
+        var position = 0;
+        for (var result : arrayResults) {
+            if (result > maxResult) {
+                maxResult = result;
+                maxLabelNumber = position;
+            }
+            position++;
+        }
+        if (maxResult < PREDICT_THRESHOLD) {
+            return Optional.empty();
+        } else {
+            return Optional.of(labelNumberToLabel.get(maxLabelNumber));
+        }
     }
 }
