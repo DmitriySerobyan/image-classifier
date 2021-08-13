@@ -103,6 +103,7 @@ public class ImageClassifier {
         model = new MultiLayerNetwork(conf);
         model.init();
         model.setListeners(new ScoreIterationListener(500));
+        System.out.println(model.summary());
     }
 
     private DataSetIterator getDataSetIterator(File[] folders) throws IOException {
