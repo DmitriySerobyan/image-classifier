@@ -105,14 +105,6 @@ public class ImageClassifier {
         model.setListeners(new ScoreIterationListener(500));
     }
 
-    public DataSetIterator getTrainingDataSetIterator() throws IOException {
-        return getDataSetIterator(trainingImageFolders);
-    }
-
-    public DataSetIterator getTestingDataSetIterator() throws IOException {
-        return getDataSetIterator(testingImageFolders);
-    }
-
     private DataSetIterator getDataSetIterator(File[] folders) throws IOException {
         var nSamples = Arrays.stream(folders)
             .mapToInt(subFolder -> subFolder.listFiles().length)
@@ -160,14 +152,14 @@ public class ImageClassifier {
         return Optional.of(img);
     }
 
-    public void trainModel(DataSetIterator trainingDataSetIterator) {
+    public void trainModel() throws IOException {
         System.out.println("Train Model...");
-        model.fit(trainingDataSetIterator);
+        model.fit(getDataSetIterator(trainingImageFolders));
     }
 
-    public void evaluatingModel(DataSetIterator testingDataSetIterator) {
+    public void evaluatingModel() throws IOException {
         System.out.println("Evaluating Model...");
-        var eval = model.evaluate(testingDataSetIterator);
+        var eval = model.evaluate(getDataSetIterator(testingImageFolders));
         System.out.println(eval.stats());
     }
 

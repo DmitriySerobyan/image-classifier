@@ -17,10 +17,9 @@ public class Main {
         try {
             var classifier = ImageClassifier.of(TRAINING_IMAGE_FOLDERS_PATH, TESTING_IMAGE_FOLDERS_PATH);
             classifier.buildModel();
-            var trainingData = classifier.getTrainingDataSetIterator();
-            classifier.trainModel(trainingData);
-            var testingData = classifier.getTestingDataSetIterator();
-            classifier.evaluatingModel(testingData);
+            classifier.trainModel();
+            classifier.evaluatingModel();
+
             var imageForClassificationFolder = new File(IMAGE_FOR_CLASSIFICATION_FOLDER_PATH);
             var imagesForClassification = imageForClassificationFolder.listFiles();
             for (var image : imagesForClassification) {
