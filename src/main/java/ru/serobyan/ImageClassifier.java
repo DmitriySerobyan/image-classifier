@@ -154,13 +154,15 @@ public class ImageClassifier {
     }
 
     public void trainModel() throws IOException {
+        var ds = getDataSetIterator(trainingImageFolders);
         System.out.println("Train Model...");
-        model.fit(getDataSetIterator(trainingImageFolders));
+        model.fit(ds);
     }
 
     public void evaluatingModel() throws IOException {
+        var ds = getDataSetIterator(testingImageFolders);
         System.out.println("Evaluating Model...");
-        var eval = model.evaluate(getDataSetIterator(testingImageFolders));
+        var eval = model.evaluate(ds);
         System.out.println(eval.stats());
     }
 
