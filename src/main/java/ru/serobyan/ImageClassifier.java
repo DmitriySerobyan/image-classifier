@@ -39,7 +39,7 @@ public class ImageClassifier {
     private final ResizeImageTransform resizer = new ResizeImageTransform(WIDTH, HEIGHT);
     private MultiLayerNetwork model;
 
-    public ImageClassifier(
+    private ImageClassifier(
         File[] trainingImageFolders,
         File[] testingImageFolders,
         int nOutcomes,
@@ -53,7 +53,7 @@ public class ImageClassifier {
         this.labelNumberToLabel = labelNumberToLabel;
     }
 
-    static ImageClassifier of(String trainingImageFoldersPath, String testingImageFoldersPath) {
+    public static ImageClassifier of(String trainingImageFoldersPath, String testingImageFoldersPath) {
         var trainingImageFolder = new File(trainingImageFoldersPath);
         var testingImageFolder = new File(testingImageFoldersPath);
         var trainingImageFolders = trainingImageFolder.listFiles();
@@ -86,38 +86,14 @@ public class ImageClassifier {
             .layer(
                 new DenseLayer.Builder()
                     .nIn(nIncomes)
-                    .nOut(nIncomes / 2)
-                    .activation(Activation.RELU)
-                    .weightInit(WeightInit.XAVIER)
-                    .build()
-            )
-            .layer(
-                new DenseLayer.Builder()
-                    .nIn(nIncomes / 2)
-                    .nOut(nIncomes / 4)
-                    .activation(Activation.RELU)
-                    .weightInit(WeightInit.XAVIER)
-                    .build()
-            )
-            .layer(
-                new DenseLayer.Builder()
-                    .nIn(nIncomes / 4)
-                    .nOut(nIncomes / 8)
-                    .activation(Activation.RELU)
-                    .weightInit(WeightInit.XAVIER)
-                    .build()
-            )
-            .layer(
-                new DenseLayer.Builder()
-                    .nIn(nIncomes / 8)
-                    .nOut(nIncomes / 16)
+                    .nOut(1000)
                     .activation(Activation.RELU)
                     .weightInit(WeightInit.XAVIER)
                     .build()
             )
             .layer(
                 new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
-                    .nIn(nIncomes / 16)
+                    .nIn(1000)
                     .nOut(nOutcomes)
                     .activation(Activation.SOFTMAX)
                     .weightInit(WeightInit.XAVIER)
