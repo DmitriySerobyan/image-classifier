@@ -1,5 +1,7 @@
 package ru.serobyan;
 
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.transform.ResizeImageTransform;
 import org.deeplearning4j.datasets.iterator.impl.ListDataSetIterator;
@@ -19,9 +21,9 @@ import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
+@Slf4j
 public class ImageClassifier {
 
     private static final int HEIGHT = 64;
@@ -78,7 +80,7 @@ public class ImageClassifier {
     }
 
     public void buildModel() {
-        System.out.println("Build Model...");
+        log.info("Build Model...");
         var conf = new NeuralNetConfiguration.Builder()
             .seed(123)
             .updater(new Nesterovs(0.006, 0.9))
@@ -104,10 +106,10 @@ public class ImageClassifier {
         model = new MultiLayerNetwork(conf);
         model.init();
         model.setListeners(new ScoreIterationListener(500));
-        System.out.println(model.summary());
+        log.info(model.summary());
     }
 
-    private DataSetIterator getDataSetIterator(File[] folders) throws IOException {
+    private DataSetIterator getDataSetIterator(File[] folders) {
         var nSamples = Arrays.stream(folders)
             .mapToInt(subFolder -> subFolder.listFiles().length)
             .sum();
@@ -120,7 +122,7 @@ public class ImageClassifier {
             var imageFiles = folder.listFiles();
             var label = folder.getName();
             for (var imageFile : imageFiles) {
-                System.out.println(n + ": " + imageFile.getName());
+                log.debug(n + ": " + imageFile.getName());
                 var imageINDArray = imageToINDArray(imageFile);
                 if (imageINDArray.isEmpty()) {
                     n++;
@@ -138,38 +140,42 @@ public class ImageClassifier {
         return new ListDataSetIterator<>(listDataSet, 10);
     }
 
-    private Optional<INDArray> imageToINDArray(File image) throws IOException {
+    @SneakyThrows
+    private Optional<INDArray> imageToINDArray(File image) {
         if (image.getName().endsWith(".gif")) {
-            System.out.println("ACHTUNG!!!");
+            log.warn("ACHTUNG!!!");
             return Optional.empty();
         }
         var writableImg = nativeImageLoader.asWritable(image);
         writableImg = resizer.transform(writableImg);
         var img = nativeImageLoader.asRowVector(writableImg.getFrame());
         if (img.data().length() != nIncomes) {
-            System.out.println("ACHTUNG!!!");
+            log.error("ACHTUNG!!!");
             return Optional.empty();
         }
         scaler.transform(img);
         return Optional.of(img);
     }
 
-    public void trainModel() throws IOException {
+    @SneakyThrows
+    public void trainModel() {
         var ds = getDataSetIterator(trainingImageFolders);
-        System.out.println("Train Model...");
+        log.info("Train Model...");
         model.fit(ds);
     }
 
-    public void evaluatingModel() throws IOException {
+    @SneakyThrows
+    public void evaluatingModel() {
         var ds = getDataSetIterator(testingImageFolders);
-        System.out.println("Evaluating Model...");
+        log.info("Evaluating Model...");
         var eval = model.evaluate(ds);
-        System.out.println(eval.stats());
+        log.info(eval.stats());
     }
 
-    public Optional<String> predict(File file) throws IOException {
-        System.out.println("Predict image: " + file.getName());
-        var imageINDArrayOpt = imageToINDArray(file);
+    @SneakyThrows
+    public Optional<String> predict(File image) {
+        log.debug("Predict image: " + image.getName());
+        var imageINDArrayOpt = imageToINDArray(image);
         if (imageINDArrayOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -177,7 +183,7 @@ public class ImageClassifier {
         input.putRow(0, imageINDArrayOpt.get());
         var results = model.output(input);
         var arrayResults = results.data().asDouble();
-        System.out.println("Predict results: " + Arrays.toString(arrayResults));
+        log.debug("Predict results: " + Arrays.toString(arrayResults));
         var maxResult = 0.0;
         var maxLabelNumber = -1;
         var position = 0;
